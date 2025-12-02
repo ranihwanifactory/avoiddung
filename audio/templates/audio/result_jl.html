@@ -1,0 +1,36 @@
+{% extends "audio/base.html" %}
+{% load static %}
+
+{% block style %}
+    <style>
+        .container-fluid, .btn, .input-group-text, h1 {
+            font-family: 'Black Han Sans', sans-serif;
+        }
+        .container-fluid {
+            color: whitesmoke;
+        }
+
+        footer {
+            background-color: #E9A5DE;
+            color: white;
+            padding: 1em;
+            bottom:0;
+        }
+
+    </style>
+{% endblock %}
+
+    {% block content %}
+    <img style="max-width: 100%;height: auto; display: block;" src="{% static 'audio/jl.png' %}">
+
+    </br>
+
+        <div class="d-grid gap-2 col-6 mx-auto">
+        <button type="button" onclick="location.href='{% url 'index' %}'" class="btn btn-primary"
+                style="background-color: #E9A5DE;
+                font-size: large;
+                border-color: transparent;">다시하기</button>
+        </div>
+        </br>
+
+    {% endblock %}

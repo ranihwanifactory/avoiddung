@@ -1,0 +1,53 @@
+{% extends "audio/base.html" %}
+{% load static %}
+
+{% block style %}
+    <style>
+        .container-fluid, .btn, .input-group-text, h1 {
+            font-family: 'Black Han Sans', sans-serif;
+        }
+        .container-fluid {
+            color: whitesmoke;
+        }
+
+        footer {
+            background-color: #E9A5DE;
+            color: white;
+            padding: 1em;
+            bottom:0;
+        }
+
+    </style>
+{% endblock %}
+
+    {% block content %}
+    <img style="max-width: 100%;height: auto; display: block;" src="{% static 'audio/main.png' %}">
+
+    </br>
+
+<!--     <button id="startRecordingButton">Start recording</button>
+        <button id="stopRecordingButton">Stop recording</button>
+        <button id="playButton">Play</button>
+        <button id="downloadButton">Download</button>-->
+
+        <h1 style="color: #E9A5DE;">분석할 음성 파일 업로드하기</h1>
+        <form action="{% url 'index'%}" method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div class="input-group mb-2" >
+              <input type="file" class="form-control" name="audio_file" id="audio_file">
+              <label class="input-group-text" for="audio_file" style="background-color: #E9A5DE; color: white;">Upload</label>
+            </div>
+
+            <p></p>
+
+            <div class="d-grid gap-2 col-6 mx-auto">
+            <button type="submit" class="btn btn-primary"
+                    style="background-color: #E9A5DE;
+                    font-size: large;
+                    border-color: transparent;">분석하기</button>
+            </div>
+        </form>
+        </br>
+
+        {% endblock %}
