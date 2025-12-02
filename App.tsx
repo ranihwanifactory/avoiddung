@@ -47,11 +47,16 @@ export default function App() {
 
   const handleShare = async () => {
     soundManager.playClick();
+    
+    const shareText = gameState === GameState.GAME_OVER 
+        ? `똥 피하기 게임에서 ${lastScore}점을 기록했습니다! 저를 이겨보세요! 💩🏃` 
+        : `하늘에서 떨어지는 똥을 피하세요! 똥 피하기 게임 같이 해요! 💩🏃`;
+
     if (navigator.share) {
       try {
         await navigator.share({
           title: '똥 피하기!',
-          text: `똥 피하기 게임에서 ${lastScore}점을 기록했습니다! 저를 이겨보세요! 💩🏃`,
+          text: shareText,
           url: window.location.href,
         });
       } catch (err) {
@@ -59,7 +64,7 @@ export default function App() {
       }
     } else {
       // Fallback: Copy to clipboard
-      navigator.clipboard.writeText(`똥 피하기 게임에서 ${lastScore}점을 기록했습니다! 게임하러 가기: ${window.location.href}`);
+      navigator.clipboard.writeText(`${shareText} ${window.location.href}`);
       alert('클립보드에 복사되었습니다!');
     }
   };
@@ -103,14 +108,14 @@ export default function App() {
 
         {/* Main Menu */}
         {gameState === GameState.MENU && (
-          <div className="h-full flex flex-col items-center justify-center p-6 space-y-6 bg-sky-100">
+          <div className="h-full flex flex-col items-center justify-center p-6 space-y-4 bg-sky-100">
              <div className="text-center animate-bounce">
                 <span className="text-8xl block mb-2">💩</span>
              </div>
-             <h2 className="text-4xl font-black text-center text-gray-800 drop-shadow-md">
+             <h2 className="text-4xl font-black text-center text-gray-800 drop-shadow-md mb-2">
                피할 준비 되셨나요?
              </h2>
-             <p className="text-gray-600 text-center max-w-xs">
+             <p className="text-gray-600 text-center max-w-xs mb-4">
                <span className="font-bold">화살표 키</span>나 <span className="font-bold">버튼</span>을 사용하여 이동하세요. 똥을 맞으면 안돼요!
              </p>
 
@@ -126,6 +131,13 @@ export default function App() {
                className="w-full max-w-xs bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-xl shadow-[0_4px_0_rgb(29,78,216)] active:shadow-none active:translate-y-1 transition-all flex items-center justify-center gap-2"
              >
                <i className="fas fa-trophy"></i> 순위표
+             </button>
+
+             <button 
+               onClick={handleShare}
+               className="w-full max-w-xs bg-teal-500 hover:bg-teal-600 text-white font-bold py-3 rounded-xl shadow-[0_4px_0_rgb(13,148,136)] active:shadow-none active:translate-y-1 transition-all flex items-center justify-center gap-2"
+             >
+               <i className="fas fa-share-alt"></i> 친구에게 공유하기
              </button>
           </div>
         )}
