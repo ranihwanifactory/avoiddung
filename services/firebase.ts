@@ -4,7 +4,6 @@ import {
   GoogleAuthProvider, 
   signInWithPopup, 
   signOut, 
-  onAuthStateChanged,
   User,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword
@@ -12,12 +11,11 @@ import {
 import { 
   getDatabase, 
   ref, 
-  push, 
   onValue, 
   query, 
   orderByChild, 
   limitToLast,
-  DatabaseReference
+  runTransaction
 } from "firebase/database";
 import { ScoreEntry } from "../types";
 
@@ -45,32 +43,50 @@ export const logout = () => signOut(auth);
 
 // DB Helpers
 export const saveScore = async (user: User, score: number) => {
-  // Changed to a unique table name to prevent conflicts
-  const scoresRef = ref(db, 'dodge_poop_scores');
-  const newScore: ScoreEntry = {
-    uid: user.uid,
-    displayName: user.displayName || user.email?.split('@')[0] || '익명',
-    score: score,
-    timestamp: Date.now()
-  };
-  return push(scoresRef, newScore);
+  // Use a user-specific path to ensure one entry per user
+  // Using a new table 'dodge_poop_best_scores'
+  const userScoreRef = ref(db, `dodge_poop_best_scores/${user.uid}`);
+  
+  // Use transaction to check if new score is higher than existing score
+  return runTransaction(userScoreRef, (currentData) => {
+    if (currentData === null) {
+      // No existing score, create new
+      return {
+        uid: user.uid,
+        displayName: user.displayName || user.email?.split('@')[0] || '익명',
+        score: score,
+        timestamp: Date.now()
+      };
+    } else {
+      // Check if new score is higher
+      if (score > currentData.score) {
+        return {
+          ...currentData, // Keep existing data (like name) if needed, or overwrite
+          score: score,
+          timestamp: Date.now(),
+          // Ensure display name is up to date
+          displayName: user.displayName || user.email?.split('@')[0] || currentData.displayName
+        };
+      }
+      // If score is not higher, abort the transaction (return undefined) to do nothing
+      return; 
+    }
+  });
 };
 
 export const subscribeToLeaderboard = (callback: (scores: ScoreEntry[]) => void) => {
-  // Changed to a unique table name
-  const scoresRef = ref(db, 'dodge_poop_scores');
+  const scoresRef = ref(db, 'dodge_poop_best_scores');
   // Get top 20 scores
   const topScoresQuery = query(scoresRef, orderByChild('score'), limitToLast(20));
 
   return onValue(topScoresQuery, (snapshot) => {
     const data = snapshot.val();
     if (data) {
-      // Firebase returns object with keys, convert to array
       const scoreList: ScoreEntry[] = Object.keys(data).map(key => ({
         id: key,
         ...data[key]
       }));
-      // Sort descending (Firebase returns ascending for limitToLast)
+      // Sort descending
       scoreList.sort((a, b) => b.score - a.score);
       callback(scoreList);
     } else {
