@@ -1,7 +1,8 @@
-const CACHE_NAME = 'dodge-poop-v3';
-// Only cache stable assets. 
-// Note: In development environments, caching source files (.tsx) can cause issues if the build process changes.
+const CACHE_NAME = 'dodge-poop-v4';
+// We MUST cache index.html for the start_url to work offline or on strict servers
 const ASSETS_TO_CACHE = [
+  './',
+  './index.html',
   './manifest.json'
 ];
 
@@ -9,7 +10,10 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
+      // It's critical that index.html is cached successfully
+      return cache.addAll(ASSETS_TO_CACHE).catch(err => {
+        console.error('Failed to cache assets:', err);
+      });
     })
   );
 });
@@ -30,17 +34,25 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Strategy: Network First, falling back to Cache.
-  // This ensures the app always tries to get the latest version from the server,
-  // which fixes the issue where a stale or non-existent index.html was being served.
+  // Special handling for navigation (loading the page)
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .catch(() => {
+          // If network fails (or returns 404 for root), serve the cached index.html
+          return caches.match('./index.html');
+        })
+    );
+    return;
+  }
+
+  // Standard Network First strategy for other assets
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        // Return valid responses immediately
         return response;
       })
       .catch(() => {
-        // If network fails, try to serve from cache
         return caches.match(event.request);
       })
   );

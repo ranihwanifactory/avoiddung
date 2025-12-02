@@ -1,7 +1,8 @@
 {
   "name": "똥 피하기",
   "short_name": "똥피하기",
-  "start_url": ".",
+  "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#fcd34d",
   "theme_color": "#fcd34d",
