@@ -26,7 +26,7 @@ export const Leaderboard: React.FC<Props> = ({ onBack, currentUserScore }) => {
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-3xl font-black text-amber-600 drop-shadow-sm">
           <i className="fas fa-trophy text-yellow-500 mr-2"></i>
-          Hall of Fame
+          명예의 전당
         </h2>
         <button 
           onClick={() => { soundManager.playClick(); onBack(); }}
@@ -38,7 +38,7 @@ export const Leaderboard: React.FC<Props> = ({ onBack, currentUserScore }) => {
 
       {currentUserScore !== undefined && currentUserScore > 0 && (
         <div className="bg-amber-100 p-4 rounded-lg mb-4 border-2 border-amber-300 text-center animate-pulse">
-          <p className="text-sm text-amber-800 font-bold uppercase">Your Last Run</p>
+          <p className="text-sm text-amber-800 font-bold uppercase">내 최근 점수</p>
           <p className="text-3xl font-black text-amber-600">{currentUserScore}</p>
         </div>
       )}
@@ -52,9 +52,9 @@ export const Leaderboard: React.FC<Props> = ({ onBack, currentUserScore }) => {
           <table className="w-full">
             <thead>
               <tr className="text-left text-gray-500 text-sm border-b-2 border-gray-100">
-                <th className="pb-2 pl-2">Rank</th>
-                <th className="pb-2">Player</th>
-                <th className="pb-2 text-right pr-2">Score</th>
+                <th className="pb-2 pl-2">순위</th>
+                <th className="pb-2">플레이어</th>
+                <th className="pb-2 text-right pr-2">점수</th>
               </tr>
             </thead>
             <tbody>

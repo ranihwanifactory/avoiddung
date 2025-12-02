@@ -3,6 +3,7 @@ import { soundManager } from '../services/audio';
 
 interface Props {
   onGameOver: (score: number) => void;
+  onQuit: () => void;
 }
 
 interface GameObject {
@@ -13,7 +14,7 @@ interface GameObject {
   speed?: number;
 }
 
-export const GameCanvas: React.FC<Props> = ({ onGameOver }) => {
+export const GameCanvas: React.FC<Props> = ({ onGameOver, onQuit }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const requestRef = useRef<number>(0);
   const scoreRef = useRef<number>(0);
@@ -252,8 +253,28 @@ export const GameCanvas: React.FC<Props> = ({ onGameOver }) => {
         </button>
 
         {isPaused && (
-            <div className="absolute inset-0 z-20 bg-black/40 backdrop-blur-sm flex items-center justify-center">
-                <div className="text-white text-4xl font-black drop-shadow-lg tracking-wider">PAUSED</div>
+            <div className="absolute inset-0 z-20 bg-black/40 backdrop-blur-sm flex items-center justify-center flex-col gap-6">
+                <div className="text-white text-4xl font-black drop-shadow-lg tracking-wider">일시정지</div>
+                <div className="flex flex-col gap-4">
+                    <button 
+                        onClick={() => {
+                            soundManager.playClick();
+                            setIsPaused(false);
+                        }}
+                        className="bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-xl font-bold text-xl shadow-lg"
+                    >
+                        계속하기
+                    </button>
+                    <button 
+                        onClick={() => {
+                            soundManager.playClick();
+                            onQuit();
+                        }}
+                        className="bg-red-500 hover:bg-red-600 text-white px-8 py-3 rounded-xl font-bold text-xl shadow-lg"
+                    >
+                        그만하기
+                    </button>
+                </div>
             </div>
         )}
 

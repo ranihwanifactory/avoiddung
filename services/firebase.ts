@@ -45,10 +45,11 @@ export const logout = () => signOut(auth);
 
 // DB Helpers
 export const saveScore = async (user: User, score: number) => {
-  const scoresRef = ref(db, 'scores');
+  // Changed to a unique table name to prevent conflicts
+  const scoresRef = ref(db, 'dodge_poop_scores');
   const newScore: ScoreEntry = {
     uid: user.uid,
-    displayName: user.displayName || user.email?.split('@')[0] || 'Anonymous',
+    displayName: user.displayName || user.email?.split('@')[0] || '익명',
     score: score,
     timestamp: Date.now()
   };
@@ -56,7 +57,8 @@ export const saveScore = async (user: User, score: number) => {
 };
 
 export const subscribeToLeaderboard = (callback: (scores: ScoreEntry[]) => void) => {
-  const scoresRef = ref(db, 'scores');
+  // Changed to a unique table name
+  const scoresRef = ref(db, 'dodge_poop_scores');
   // Get top 20 scores
   const topScoresQuery = query(scoresRef, orderByChild('score'), limitToLast(20));
 

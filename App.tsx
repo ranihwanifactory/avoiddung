@@ -10,30 +10,19 @@ import { InstallPrompt } from './components/InstallPrompt';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
-  const [gameState, setGameState] = useState<GameState>(GameState.AUTH);
+  const [gameState, setGameState] = useState<GameState>(GameState.MENU); // Start at MENU directly
   const [lastScore, setLastScore] = useState(0);
-  const [isGuest, setIsGuest] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
-      if (u) {
-        setIsGuest(false);
-        if (gameState === GameState.AUTH) {
-            setGameState(GameState.MENU);
-        }
-      } else if (!isGuest) {
-        // Only redirect to auth if not explicitly playing as guest
-        setGameState(GameState.AUTH);
+      // If user logs in while on AUTH screen, go back to MENU
+      if (u && gameState === GameState.AUTH) {
+          setGameState(GameState.MENU);
       }
     });
     return () => unsubscribe();
-  }, [gameState, isGuest]);
-
-  const handleGuestPlay = () => {
-    setIsGuest(true);
-    setGameState(GameState.MENU);
-  };
+  }, [gameState]);
 
   const handleStartGame = () => {
     soundManager.playClick();
@@ -42,7 +31,7 @@ export default function App() {
 
   const handleGameOver = async (score: number) => {
     setLastScore(score);
-    if (user && !isGuest) {
+    if (user) {
       try {
         await saveScore(user, score);
       } catch (err) {
@@ -52,13 +41,17 @@ export default function App() {
     setGameState(GameState.GAME_OVER);
   };
 
+  const handleQuitGame = () => {
+      setGameState(GameState.MENU);
+  };
+
   const handleShare = async () => {
     soundManager.playClick();
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Dodge the Poop!',
-          text: `I just scored ${lastScore} in Dodge the Poop! Can you beat me? 💩🏃`,
+          title: '똥 피하기!',
+          text: `똥 피하기 게임에서 ${lastScore}점을 기록했습니다! 저를 이겨보세요! 💩🏃`,
           url: window.location.href,
         });
       } catch (err) {
@@ -66,8 +59,8 @@ export default function App() {
       }
     } else {
       // Fallback: Copy to clipboard
-      navigator.clipboard.writeText(`I scored ${lastScore} in Dodge the Poop! Play here: ${window.location.href}`);
-      alert('Link copied to clipboard!');
+      navigator.clipboard.writeText(`똥 피하기 게임에서 ${lastScore}점을 기록했습니다! 게임하러 가기: ${window.location.href}`);
+      alert('클립보드에 복사되었습니다!');
     }
   };
 
@@ -78,21 +71,21 @@ export default function App() {
       {gameState !== GameState.PLAYING && (
         <header className="p-4 flex justify-between items-center bg-white shadow-sm z-50">
            <h1 className="text-xl font-black text-amber-600 tracking-tighter flex items-center gap-2">
-             <span className="text-2xl">💩</span> DODGE IT!
+             <span className="text-2xl">💩</span> 똥 피하기
            </h1>
            {user ? (
              <button 
                 onClick={() => { soundManager.playClick(); logout(); }}
                 className="text-sm font-semibold text-gray-500 hover:text-red-500"
                >
-                 Logout
+                 로그아웃
                </button>
-           ) : isGuest && (
+           ) : (
              <button 
-                onClick={() => { soundManager.playClick(); setIsGuest(false); setGameState(GameState.AUTH); }}
+                onClick={() => { soundManager.playClick(); setGameState(GameState.AUTH); }}
                 className="text-sm font-semibold text-amber-600 border border-amber-600 px-3 py-1 rounded-lg hover:bg-amber-50"
              >
-                Login to Save Score
+                로그인
              </button>
            )}
         </header>
@@ -104,7 +97,7 @@ export default function App() {
         {/* Auth Screen */}
         {gameState === GameState.AUTH && (
            <div className="h-full flex items-center justify-center bg-sky-100 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]">
-             <Auth onPlayAsGuest={handleGuestPlay} />
+             <Auth onCancel={() => setGameState(GameState.MENU)} />
            </div>
         )}
 
@@ -115,55 +108,54 @@ export default function App() {
                 <span className="text-8xl block mb-2">💩</span>
              </div>
              <h2 className="text-4xl font-black text-center text-gray-800 drop-shadow-md">
-               Ready to Dodge?
+               피할 준비 되셨나요?
              </h2>
              <p className="text-gray-600 text-center max-w-xs">
-               Use <span className="font-bold">Arrow Keys</span> or <span className="font-bold">Buttons</span> to move. Don't get hit!
+               <span className="font-bold">화살표 키</span>나 <span className="font-bold">버튼</span>을 사용하여 이동하세요. 똥을 맞으면 안돼요!
              </p>
 
              <button 
                onClick={handleStartGame}
                className="w-full max-w-xs bg-amber-500 hover:bg-amber-600 text-white text-2xl font-black py-4 rounded-2xl shadow-[0_6px_0_rgb(180,83,9)] active:shadow-none active:translate-y-1.5 transition-all"
              >
-               PLAY NOW
+               게임 시작
              </button>
 
              <button 
                onClick={() => { soundManager.playClick(); setGameState(GameState.LEADERBOARD); }}
                className="w-full max-w-xs bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-xl shadow-[0_4px_0_rgb(29,78,216)] active:shadow-none active:translate-y-1 transition-all flex items-center justify-center gap-2"
              >
-               <i className="fas fa-trophy"></i> Leaderboard
+               <i className="fas fa-trophy"></i> 순위표
              </button>
           </div>
         )}
 
         {/* Gameplay */}
         {gameState === GameState.PLAYING && (
-          <GameCanvas onGameOver={handleGameOver} />
+          <GameCanvas onGameOver={handleGameOver} onQuit={handleQuitGame} />
         )}
 
         {/* Game Over Screen */}
         {gameState === GameState.GAME_OVER && (
           <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm p-6 text-white animate-fadeIn">
-             <h2 className="text-6xl font-black text-red-500 mb-2 drop-shadow-[0_2px_0_#fff]">OOPS!</h2>
-             <p className="text-xl mb-8 font-bold">You stepped in it.</p>
+             <h2 className="text-6xl font-black text-red-500 mb-2 drop-shadow-[0_2px_0_#fff]">으악!</h2>
+             <p className="text-xl mb-8 font-bold">똥을 밟았어요.</p>
              
              <div className="bg-white/10 p-6 rounded-2xl border-2 border-white/20 text-center mb-8 w-full max-w-xs">
-               <p className="text-sm uppercase tracking-widest text-gray-300 mb-2">Final Score</p>
+               <p className="text-sm uppercase tracking-widest text-gray-300 mb-2">최종 점수</p>
                <p className="text-6xl font-mono font-black text-amber-400">{lastScore}</p>
              </div>
 
-             {isGuest && (
+             {!user && (
                  <div className="mb-6 w-full max-w-xs">
                      <button
                         onClick={() => {
                              soundManager.playClick();
-                             setIsGuest(false);
                              setGameState(GameState.AUTH);
                         }}
                         className="w-full bg-amber-100 text-amber-800 font-bold py-2 rounded-lg border-2 border-amber-300 hover:bg-amber-200"
                      >
-                         Login to Save High Score!
+                         로그인하고 점수 저장하기
                      </button>
                  </div>
              )}
@@ -173,19 +165,19 @@ export default function App() {
                   onClick={handleStartGame}
                   className="col-span-2 bg-green-500 hover:bg-green-600 text-white py-4 rounded-xl font-black shadow-[0_4px_0_rgb(21,128,61)] active:translate-y-1 active:shadow-none transition-all"
                 >
-                  TRY AGAIN
+                  다시 하기
                 </button>
                 <button 
                    onClick={handleShare}
                    className="bg-blue-500 hover:bg-blue-600 text-white py-3 rounded-xl font-bold shadow-[0_4px_0_rgb(29,78,216)] active:translate-y-1 active:shadow-none transition-all"
                 >
-                  <i className="fas fa-share-alt mr-2"></i> Share
+                  <i className="fas fa-share-alt mr-2"></i> 공유
                 </button>
                 <button 
                    onClick={() => { soundManager.playClick(); setGameState(GameState.MENU); }}
                    className="bg-gray-600 hover:bg-gray-700 text-white py-3 rounded-xl font-bold shadow-[0_4px_0_rgb(55,65,81)] active:translate-y-1 active:shadow-none transition-all"
                 >
-                  Menu
+                  메뉴
                 </button>
              </div>
           </div>
@@ -196,7 +188,7 @@ export default function App() {
           <div className="absolute inset-0 z-40 bg-sky-100 p-4 pt-8">
             <Leaderboard 
               onBack={() => { setGameState(GameState.MENU); }} 
-              currentUserScore={(!isGuest && lastScore > 0) ? lastScore : undefined}
+              currentUserScore={(!user && lastScore > 0) ? undefined : (lastScore > 0 ? lastScore : undefined)}
             />
           </div>
         )}
