@@ -3,7 +3,11 @@ import { signInWithGoogle, auth } from '../services/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { soundManager } from '../services/audio';
 
-export const Auth: React.FC = () => {
+interface Props {
+  onPlayAsGuest: () => void;
+}
+
+export const Auth: React.FC<Props> = ({ onPlayAsGuest }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -64,7 +68,7 @@ export const Auth: React.FC = () => {
           </div>
         </div>
 
-        <form onSubmit={handleEmailAuth} className="space-y-4">
+        <form onSubmit={handleEmailAuth} className="space-y-4 mb-6">
           <div>
             <input 
               type="email" 
@@ -94,7 +98,17 @@ export const Auth: React.FC = () => {
           </button>
         </form>
 
-        <div className="mt-6 text-center text-sm text-gray-600">
+        <button 
+            onClick={() => {
+                soundManager.playClick();
+                onPlayAsGuest();
+            }}
+            className="w-full bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold py-3 px-4 rounded-xl transition-all mb-4"
+        >
+            Play as Guest
+        </button>
+
+        <div className="mt-2 text-center text-sm text-gray-600">
           {isLogin ? "Don't have an account? " : "Already have an account? "}
           <button 
             onClick={() => {

@@ -20,6 +20,10 @@ export const GameCanvas: React.FC<Props> = ({ onGameOver }) => {
   const [currentScore, setCurrentScore] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
+  // Control states
+  const keysPressed = useRef<{ [key: string]: boolean }>({});
+  const touchControl = useRef<{ left: boolean; right: boolean }>({ left: false, right: false });
+
   // Game State Refs (avoid stale closures)
   const playerRef = useRef<GameObject>({ x: 0, y: 0, width: 40, height: 40 });
   const enemiesRef = useRef<GameObject[]>([]);
@@ -27,9 +31,6 @@ export const GameCanvas: React.FC<Props> = ({ onGameOver }) => {
   const gameSpeedRef = useRef<number>(1);
   const canvasSizeRef = useRef({ width: 0, height: 0 });
   
-  // Touch handling
-  const touchXRef = useRef<number | null>(null);
-
   const initGame = () => {
     if (!canvasRef.current) return;
     const canvas = canvasRef.current;
@@ -95,6 +96,21 @@ export const GameCanvas: React.FC<Props> = ({ onGameOver }) => {
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // Player Movement (Keyboard/Buttons)
+    const moveSpeed = 7 + (scoreRef.current * 0.01); // Player gets slightly faster too
+    if (keysPressed.current['ArrowLeft'] || touchControl.current.left) {
+        playerRef.current.x -= moveSpeed;
+    }
+    if (keysPressed.current['ArrowRight'] || touchControl.current.right) {
+        playerRef.current.x += moveSpeed;
+    }
+
+    // Clamp Player
+    if (playerRef.current.x < 0) playerRef.current.x = 0;
+    if (playerRef.current.x > canvas.width - playerRef.current.width) {
+        playerRef.current.x = canvas.width - playerRef.current.width;
+    }
+
     // Update Logic
     spawnEnemy(timestamp);
 
@@ -145,8 +161,16 @@ export const GameCanvas: React.FC<Props> = ({ onGameOver }) => {
     ctx.textBaseline = 'middle';
     ctx.shadowColor = 'rgba(0,0,0,0.2)';
     ctx.shadowBlur = 10;
-    // Determine player direction or state if needed, just use a running person
-    ctx.fillText('🏃', playerRef.current.x + playerRef.current.width/2, playerRef.current.y + playerRef.current.height/2);
+    
+    // Flip player sprite if moving left
+    ctx.save();
+    if (keysPressed.current['ArrowLeft'] || touchControl.current.left) {
+        ctx.scale(-1, 1);
+        ctx.fillText('🏃', -(playerRef.current.x + playerRef.current.width/2), playerRef.current.y + playerRef.current.height/2);
+    } else {
+        ctx.fillText('🏃', playerRef.current.x + playerRef.current.width/2, playerRef.current.y + playerRef.current.height/2);
+    }
+    ctx.restore();
 
     // Draw Enemies (Poop emoji)
     enemiesRef.current.forEach(enemy => {
@@ -177,35 +201,31 @@ export const GameCanvas: React.FC<Props> = ({ onGameOver }) => {
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-        e.preventDefault(); // Prevent scrolling
-        const touch = e.touches[0];
-        playerRef.current.x = touch.clientX - playerRef.current.width / 2;
-        // Clamp to screen
-        if (playerRef.current.x < 0) playerRef.current.x = 0;
-        if (playerRef.current.x > canvasSizeRef.current.width - playerRef.current.width) {
-            playerRef.current.x = canvasSizeRef.current.width - playerRef.current.width;
+        // Only prevent default if we aren't hitting the UI buttons
+        if ((e.target as HTMLElement).tagName !== 'BUTTON') {
+             e.preventDefault(); 
         }
     };
-
-    // Mouse support for desktop testing
-    const handleMouseMove = (e: MouseEvent) => {
-        playerRef.current.x = e.clientX - playerRef.current.width / 2;
-        // Clamp
-        if (playerRef.current.x < 0) playerRef.current.x = 0;
-        if (playerRef.current.x > canvasSizeRef.current.width - playerRef.current.width) {
-            playerRef.current.x = canvasSizeRef.current.width - playerRef.current.width;
-        }
-    }
+    
+    // Keyboard handlers
+    const handleKeyDown = (e: KeyboardEvent) => {
+        keysPressed.current[e.key] = true;
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+        keysPressed.current[e.key] = false;
+    };
 
     window.addEventListener('resize', handleResize);
     window.addEventListener('touchmove', handleTouchMove, { passive: false });
-    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
 
     return () => {
       cancelAnimationFrame(requestRef.current);
       window.removeEventListener('resize', handleResize);
       window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
     };
   }, [gameLoop]);
 
@@ -236,6 +256,29 @@ export const GameCanvas: React.FC<Props> = ({ onGameOver }) => {
                 <div className="text-white text-4xl font-black drop-shadow-lg tracking-wider">PAUSED</div>
             </div>
         )}
+
+        {/* On-Screen Controls */}
+        <div className="absolute bottom-6 left-0 right-0 z-10 flex justify-between px-6 pointer-events-auto">
+            <button 
+                className="w-20 h-20 bg-white/50 backdrop-blur-sm rounded-full border-4 border-white/60 shadow-lg flex items-center justify-center active:bg-white/80 active:scale-95 transition-all select-none touch-manipulation"
+                onMouseDown={() => touchControl.current.left = true}
+                onMouseUp={() => touchControl.current.left = false}
+                onTouchStart={(e) => { e.preventDefault(); touchControl.current.left = true; }}
+                onTouchEnd={(e) => { e.preventDefault(); touchControl.current.left = false; }}
+            >
+                <i className="fas fa-arrow-left text-3xl text-gray-700 opacity-70"></i>
+            </button>
+
+            <button 
+                className="w-20 h-20 bg-white/50 backdrop-blur-sm rounded-full border-4 border-white/60 shadow-lg flex items-center justify-center active:bg-white/80 active:scale-95 transition-all select-none touch-manipulation"
+                onMouseDown={() => touchControl.current.right = true}
+                onMouseUp={() => touchControl.current.right = false}
+                onTouchStart={(e) => { e.preventDefault(); touchControl.current.right = true; }}
+                onTouchEnd={(e) => { e.preventDefault(); touchControl.current.right = false; }}
+            >
+                <i className="fas fa-arrow-right text-3xl text-gray-700 opacity-70"></i>
+            </button>
+        </div>
 
         <canvas ref={canvasRef} className="block touch-none" />
     </div>

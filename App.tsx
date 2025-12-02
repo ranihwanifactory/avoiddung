@@ -12,18 +12,28 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [gameState, setGameState] = useState<GameState>(GameState.AUTH);
   const [lastScore, setLastScore] = useState(0);
+  const [isGuest, setIsGuest] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
-      if (u && gameState === GameState.AUTH) {
-        setGameState(GameState.MENU);
-      } else if (!u) {
+      if (u) {
+        setIsGuest(false);
+        if (gameState === GameState.AUTH) {
+            setGameState(GameState.MENU);
+        }
+      } else if (!isGuest) {
+        // Only redirect to auth if not explicitly playing as guest
         setGameState(GameState.AUTH);
       }
     });
     return () => unsubscribe();
-  }, [gameState]);
+  }, [gameState, isGuest]);
+
+  const handleGuestPlay = () => {
+    setIsGuest(true);
+    setGameState(GameState.MENU);
+  };
 
   const handleStartGame = () => {
     soundManager.playClick();
@@ -32,7 +42,7 @@ export default function App() {
 
   const handleGameOver = async (score: number) => {
     setLastScore(score);
-    if (user) {
+    if (user && !isGuest) {
       try {
         await saveScore(user, score);
       } catch (err) {
@@ -70,15 +80,20 @@ export default function App() {
            <h1 className="text-xl font-black text-amber-600 tracking-tighter flex items-center gap-2">
              <span className="text-2xl">💩</span> DODGE IT!
            </h1>
-           {user && (
-             <div className="flex gap-3">
-               <button 
+           {user ? (
+             <button 
                 onClick={() => { soundManager.playClick(); logout(); }}
                 className="text-sm font-semibold text-gray-500 hover:text-red-500"
                >
                  Logout
                </button>
-             </div>
+           ) : isGuest && (
+             <button 
+                onClick={() => { soundManager.playClick(); setIsGuest(false); setGameState(GameState.AUTH); }}
+                className="text-sm font-semibold text-amber-600 border border-amber-600 px-3 py-1 rounded-lg hover:bg-amber-50"
+             >
+                Login to Save Score
+             </button>
            )}
         </header>
       )}
@@ -89,12 +104,12 @@ export default function App() {
         {/* Auth Screen */}
         {gameState === GameState.AUTH && (
            <div className="h-full flex items-center justify-center bg-sky-100 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]">
-             <Auth />
+             <Auth onPlayAsGuest={handleGuestPlay} />
            </div>
         )}
 
         {/* Main Menu */}
-        {gameState === GameState.MENU && user && (
+        {gameState === GameState.MENU && (
           <div className="h-full flex flex-col items-center justify-center p-6 space-y-6 bg-sky-100">
              <div className="text-center animate-bounce">
                 <span className="text-8xl block mb-2">💩</span>
@@ -103,7 +118,7 @@ export default function App() {
                Ready to Dodge?
              </h2>
              <p className="text-gray-600 text-center max-w-xs">
-               Drag your finger to move. Don't get hit by the falling poop!
+               Use <span className="font-bold">Arrow Keys</span> or <span className="font-bold">Buttons</span> to move. Don't get hit!
              </p>
 
              <button 
@@ -138,6 +153,21 @@ export default function App() {
                <p className="text-6xl font-mono font-black text-amber-400">{lastScore}</p>
              </div>
 
+             {isGuest && (
+                 <div className="mb-6 w-full max-w-xs">
+                     <button
+                        onClick={() => {
+                             soundManager.playClick();
+                             setIsGuest(false);
+                             setGameState(GameState.AUTH);
+                        }}
+                        className="w-full bg-amber-100 text-amber-800 font-bold py-2 rounded-lg border-2 border-amber-300 hover:bg-amber-200"
+                     >
+                         Login to Save High Score!
+                     </button>
+                 </div>
+             )}
+
              <div className="grid grid-cols-2 gap-4 w-full max-w-xs">
                 <button 
                   onClick={handleStartGame}
@@ -166,7 +196,7 @@ export default function App() {
           <div className="absolute inset-0 z-40 bg-sky-100 p-4 pt-8">
             <Leaderboard 
               onBack={() => { setGameState(GameState.MENU); }} 
-              currentUserScore={lastScore > 0 ? lastScore : undefined}
+              currentUserScore={(!isGuest && lastScore > 0) ? lastScore : undefined}
             />
           </div>
         )}
